@@ -1,0 +1,81 @@
+---
+title: "Peer Assesment 1 - Reproducible Research"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+
+```r
+pamd <- read.csv("activity.csv") ##read the initial file
+
+stepsDay <- as.data.frame(pamd %>% group_by(date) %>% summarise(sum(steps)))
+dayMedian <- apply(stepsDay,2, FUN = median, na.rm = TRUE)
+colnames(stepsDay)[2] <- "totalSteps" ##rename column
+dayMedian <- as.numeric(dayMedian)
+```
+
+```
+## Warning: NAs introduced by coercion
+```
+
+```r
+dayMean <- mean(stepsDay$totalSteps, na.rm = TRUE)
+```
+
+At this point we plot the histogram, including a vertical line for each of the median, and mean.
+
+```r
+hist(stepsDay$totalSteps,breaks=8,xlab="Total Steps per Day")
+abline(v=dayMedian,col=3,lwd=3) ## green line at the median
+abline(v=dayMean,col=4,lty=2)##dotted blue line at the mean
+```
+
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png) 
+
+Next, I created a dataset grouped by interval and summarised.  I also created a value to hold the highest average number of steps in an interval, then plotted a line of the interval averages
+
+```r
+pamd2 <- pamd[complete.cases(pamd),]
+stepsInterval <- as.data.frame(pamd2 %>% group_by(interval) %>% summarise(total = sum(steps)/61))
+
+highestAvg <- max(stepsInterval$total, na.rm=TRUE) #get highest avg
+tmp = subset(stepsInterval, total == highestAvg)
+
+plot(x=stepsInterval$interval,y=stepsInterval$total,type='l')
+points(tmp$interval,tmp$total,type="p")
+abline(v=tmp$interval,col=4,lty=2)
+```
+
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png) 
+The interval containing the highest average steps is 835, which I derived by subsetting the data based on an average equal to the highest average, as shown below:
+
+```r
+tmp = subset(stepsInterval, total == highestAvg)
+```
+
+In order to deal with missing values, I chose to replace the missing value with the mean value for the interval in which the missing value existed.  The code to complete that looks like this:
+
+```r
+alldata <- full_join(pamd,stepsInterval, by="interval") ##join original data with subset of averages at each interval
+alldata$steps[is.na(alldata$steps)] <- alldata$total[is.na(alldata$steps)]##copy the mean column into steps column, where steps is NA
+
+stepsDay2 <- as.data.frame(alldata %>% group_by(date) %>% summarise(sum(steps)))
+dayMedian2 <- apply(stepsDay2,2, FUN = median, na.rm = TRUE)
+dayMedian2 <- as.numeric(dayMedian2)
+```
+
+```
+## Warning: NAs introduced by coercion
+```
+
+```r
+colnames(stepsDay2)[2] <- "totalSteps" ##rename column
+stepsDay2$totalSteps <- as.integer(stepsDay2$totalSteps)
+dayMean2 <- mean(stepsDay2$totalSteps)
+```
+
